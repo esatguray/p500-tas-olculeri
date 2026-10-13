@@ -182,11 +182,13 @@ button,input,textarea{font:inherit;color:inherit}
 .sayac{font:500 15px/1.2 var(--govde);color:var(--murekkep-2);white-space:nowrap}
 .sayac b{font:600 24px/1 var(--dar);color:var(--murekkep);font-variant-numeric:tabular-nums}
 .durum{
-  min-width:205px;
+  min-width:0;
   display:flex;align-items:center;gap:7px;
   font-size:13.5px;color:var(--murekkep-3);
   white-space:nowrap;
 }
+.durum span{overflow:hidden;text-overflow:ellipsis}
+@media (min-width:1021px){.durum{min-width:205px}}
 .durum i{width:8px;height:8px;border-radius:50%;background:var(--cizgi-koyu);flex:none}
 .durum.kirli{color:var(--altin-koyu)}
 .durum.kirli i{background:var(--altin)}
@@ -268,7 +270,7 @@ button,input,textarea{font:inherit;color:inherit}
   min-height:96px;
   resize:vertical;
   padding:9px 10px;
-  font-size:15px;line-height:1.42;
+  font-size:16px;line-height:1.4;
   border:1px solid var(--cizgi);
   border-radius:6px;
   background:var(--kart);
@@ -277,6 +279,7 @@ button,input,textarea{font:inherit;color:inherit}
 }
 .alan textarea:hover{border-color:var(--cizgi-koyu)}
 .alan textarea:focus{outline:none;border-color:var(--altin);box-shadow:0 0 0 3px var(--altin-zemin)}
+.ek-ac{display:none}
 
 .alt-not{margin:28px 0 0;max-width:72ch;font-size:13.5px;color:var(--murekkep-3)}
 
@@ -302,13 +305,61 @@ button,input,textarea{font:inherit;color:inherit}
   .alan .etiket small{font-weight:400;color:var(--murekkep-3);margin-left:6px}
   .alan textarea{min-height:76px}
 }
+/* ---- telefon: fotoğraf + taş ölçüsü yan yana, boş alternatif 2–3 gizli ---- */
 @media (max-width:620px){
-  .sayfa{padding:0 16px 56px}
-  .satir{grid-template-columns:1fr}
-  .urun{grid-template-columns:1fr}
-  .urun .serit{grid-column:1;grid-row:auto}
-  .dugme{padding:9px 12px}
-  .dugme .uzun-yazi{display:none}
+  .sayfa{
+    padding:0 max(16px,env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+  }
+  .giris{padding:24px 0 20px;gap:18px}
+  .giris h1{font-size:36px;margin-bottom:14px}
+  .adimlar{gap:8px;font-size:14.5px}
+  .adimlar li{grid-template-columns:20px 1fr;gap:6px}
+  .adimlar li::before{font-size:19px}
+
+  .arac{grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;padding:8px 0 8px}
+  .cetvel{height:30px}
+  .cizik::before{height:6px}
+  .cizik.orta::before{height:10px}
+  .cizik.uzun::before{height:14px}
+  .cizik span{top:16px;font-size:10.5px}
+  .sayac{grid-column:1;grid-row:2;font-size:13.5px;white-space:normal}
+  .sayac b{font-size:21px}
+  .dugmeler{grid-column:2;grid-row:2;gap:6px}
+  .durum{grid-column:1 / -1;grid-row:3;font-size:12.5px}
+  .dugme{padding:9px 12px;font-size:14px;gap:6px}
+
+  .satir{
+    grid-template-columns:minmax(0,44%) minmax(0,1fr);
+    grid-template-areas:"kod kod" "foto olcu" "serit serit" "alt1 alt1" "alt2 alt2" "alt3 alt3" "ekac ekac" "not not";
+    gap:0 10px;
+    padding:18px 0 20px 12px;
+  }
+  .urun{display:contents}
+  .satir > *, .urun > *{margin-top:10px}
+  .urun .kod{grid-area:kod;margin:0;font-size:28px}
+  .foto-ana{grid-area:foto;aspect-ratio:1 / 1}
+  .urun .serit{grid-area:serit;margin-top:8px}
+  .serit button{width:48px;height:48px}
+  .alan.ilk{grid-area:olcu}
+  .alan.ilk textarea{min-height:0}
+  .alan.alt1{grid-area:alt1}
+  .alan.alt2{grid-area:alt2}
+  .alan.alt3{grid-area:alt3}
+  .alan.not{grid-area:not}
+  .alan textarea{min-height:60px}
+  .alan .etiket{font-size:13.5px;margin-bottom:4px}
+  .alan .etiket small{display:block;margin:1px 0 0}
+  .alan.ek.kapali{display:none}
+  .ek-ac{
+    display:block;grid-area:ekac;justify-self:start;
+    padding:8px 2px;border:0;background:none;
+    color:var(--altin-koyu);font-weight:600;font-size:14.5px;cursor:pointer;
+  }
+  .ek-ac.bitti{display:none}
+  .ek-ac:focus-visible{outline:2px solid var(--altin);outline-offset:2px;border-radius:4px}
+}
+@media (max-width:380px){
+  .dugme svg{display:none}
 }
 
 /* ---- bakıcı (tam ekran fotoğraf) ---- */
@@ -430,9 +481,13 @@ button,input,textarea{font:inherit;color:inherit}
 .gezinti button:disabled{opacity:.4;cursor:default}
 
 @media (max-width:900px){
-  .bakici{grid-template-columns:1fr;grid-template-rows:62vh auto;overflow-y:auto}
-  .yan{border-left:0;border-top:1px solid var(--tepsi-cizgi);overflow:visible}
-  .ipucu{right:70px}
+  .bakici{grid-template-columns:1fr;grid-template-rows:58vh auto;grid-template-rows:58svh auto;overflow-y:auto;overscroll-behavior:contain}
+  .yan{border-left:0;border-top:1px solid var(--tepsi-cizgi);overflow:visible;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  .yan-kod{font-size:38px}
+  .sahne-kapat{top:calc(12px + env(safe-area-inset-top));right:12px}
+  .ipucu{top:calc(12px + env(safe-area-inset-top));left:12px;font-size:13px}
+  .zoom{bottom:12px}
+  .foto-no{bottom:20px}
 }
 
 /* ---- kayıt bildirimi ---- */
@@ -453,7 +508,7 @@ button,input,textarea{font:inherit;color:inherit}
   border:1px solid currentColor;background:none;color:inherit;
   font-weight:600;cursor:pointer;
 }
-@media (max-width:620px){.bildirim{left:16px;right:16px;bottom:16px}}
+@media (max-width:620px){.bildirim{left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom))}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -555,9 +610,9 @@ var URUNLER = JSON.parse(document.getElementById("urunler").textContent);
 var GOMULU = JSON.parse(document.getElementById("kayit").textContent);
 var ALANLAR = [
   {id:"olcu", ad:"Taş ölçüsü", alt:"Fotoğraftaki üründe", sinif:"ilk"},
-  {id:"alt1", ad:"Alternatif ölçü 1", alt:"Farklı ebatta yapılabiliyorsa", sinif:""},
-  {id:"alt2", ad:"Alternatif ölçü 2", alt:"", sinif:""},
-  {id:"alt3", ad:"Alternatif ölçü 3", alt:"", sinif:""},
+  {id:"alt1", ad:"Alternatif ölçü 1", alt:"Farklı ebatta yapılabiliyorsa", sinif:"alt1"},
+  {id:"alt2", ad:"Alternatif ölçü 2", alt:"", sinif:"alt2 ek"},
+  {id:"alt3", ad:"Alternatif ölçü 3", alt:"", sinif:"alt3 ek"},
   {id:"not", ad:"Not", alt:"Taş tipi, renk, dikkat edilecek şey", sinif:"not"}
 ];
 var ANAHTAR = "p500-tas-olculeri:" + GOMULU.belge;
@@ -590,7 +645,12 @@ function ayarla(kod, alan, v, kaynak){
   if (Object.keys(kayit).length) D.veriler[kod] = kayit; else delete D.veriler[kod];
   D.guncellendi = new Date().toISOString();
   (kutular[kod + "|" + alan] || []).forEach(function(t){
-    if (t !== kaynak && t.isConnected) { t.value = v; boyutla(t); }
+    if (t !== kaynak && t.isConnected) {
+      t.value = v;
+      boyutla(t);
+      var gizli = v && t.closest(".alan.kapali");   /* büyütme ekranında yazılan alternatif satırda da görünsün */
+      if (gizli) gizli.classList.remove("kapali");
+    }
   });
   ilerleme();
   durumYaz();
@@ -677,6 +737,22 @@ URUNLER.forEach(function(u, ui){
   }
   s.appendChild(urun);
   ALANLAR.forEach(function(a){ s.appendChild(alanYap(u.kod, a, "t-")); });
+
+  /* telefonda boş alternatif 2–3 gizli durur; bu düğme sıradakini açar (geniş ekranda düğme görünmez) */
+  var kapali = Array.prototype.filter.call(s.querySelectorAll(".alan.ek"), function(k){
+    return !k.querySelector("textarea").value;
+  });
+  kapali.forEach(function(k){ k.classList.add("kapali"); });
+  var ekAc = document.createElement("button");
+  ekAc.type = "button";
+  ekAc.className = "ek-ac" + (kapali.length ? "" : " bitti");
+  ekAc.textContent = "+ Bir alternatif ölçü daha";
+  ekAc.addEventListener("click", function(){
+    var k = s.querySelector(".alan.ek.kapali");
+    if (k){ k.classList.remove("kapali"); k.querySelector("textarea").focus(); }
+    if (!s.querySelector(".alan.ek.kapali")) ekAc.classList.add("bitti");
+  });
+  s.insertBefore(ekAc, s.querySelector(".alan.not"));
   liste.appendChild(s);
 });
 
@@ -921,6 +997,7 @@ function urunGoster(ui, fi){
   document.getElementById("onceki").textContent = ui > 0 ? "‹ " + URUNLER[ui - 1].kod : "‹ Önceki ürün";
   document.getElementById("sonraki").textContent = ui < URUNLER.length - 1 ? URUNLER[ui + 1].kod + " ›" : "Sonraki ürün ›";
   fotoGoster(fi || 0);
+  bakici.scrollTop = 0;
   Array.prototype.forEach.call(alanlar.querySelectorAll("textarea"), boyutla);
 }
 function ac(ui, fi){
@@ -929,7 +1006,8 @@ function ac(ui, fi){
   document.documentElement.style.overflow = "hidden";
   ipucu.classList.remove("sonuk");
   urunGoster(ui, fi);
-  document.getElementById("kapat").focus();
+  bakici.scrollTop = 0;
+  document.getElementById("sahne-kapat").focus({preventScroll: true});
 }
 function kapat(){
   bakici.hidden = true;
