@@ -283,6 +283,15 @@ button,input,textarea{font:inherit;color:inherit}
 
 .alt-not{margin:28px 0 0;max-width:72ch;font-size:13.5px;color:var(--murekkep-3)}
 .alt-not + .alt-not{margin-top:10px}
+.link-uyari{
+  margin:16px 0 0;
+  padding:14px 16px;
+  border-radius:9px;
+  background:#8E2B1E;
+  color:#FFFFFF;
+  font-size:15px;line-height:1.45;
+}
+.link-uyari b{display:block;font-size:17px;margin-bottom:3px}
 .metin-dugme{
   padding:0;border:0;background:none;
   font:inherit;color:var(--altin-koyu);
@@ -521,6 +530,10 @@ button,input,textarea{font:inherit;color:inherit}
 </head>
 <body>
 <div class="sayfa">
+  <div class="link-uyari" id="link-uyari" role="alert" hidden>
+    <b id="link-uyari-baslik">Bu link eksik açıldı.</b>
+    <span id="link-uyari-metin">Yazdıklarınız bize ulaşmaz. Sayfayı kapatın ve size WhatsApp’tan gönderilen mesajdaki linke dokunarak yeniden açın.</span>
+  </div>
   <section class="giris">
     <div>
       <h1>P500 serisi taş ölçüleri</h1>
@@ -808,6 +821,13 @@ function durumYaz(){
   else { yazi = "Henüz bir şey yazılmadı"; }
   durumEl.className = "durum " + sinif;
   durumEl.querySelector("span").textContent = yazi;
+  /* eksik ya da bozuk link: en üstte göze batan uyarı */
+  var uyari = document.getElementById("link-uyari");
+  uyari.hidden = !(!FA || O_HATA === 401);
+  if (O_HATA === 401){
+    document.getElementById("link-uyari-baslik").textContent = "Bu link geçersiz.";
+    document.getElementById("link-uyari-metin").textContent = "Yazdıklarınız bize ulaşmıyor, bu cihazda bekliyor. Link eksik kopyalanmış olabilir; size WhatsApp’tan gönderilen mesajdaki linke dokunarak yeniden açın. Düzelmezse bize haber verin.";
+  }
 }
 
 /* ---- firma + kayıt bilgisi ---- */
