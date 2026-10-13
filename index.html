@@ -979,9 +979,15 @@ function it(keepalive){
         O_HATA = null; O_DENEME = 0;
         return true;
       });
-      if (r.status === 409 && O_DENEME < 3){
-        O_DENEME++;
-        return r.json().then(function(j){ isle(j); O_SURUYOR = null; return it(); });
+      if (r.status === 409){
+        /* başka cihaz kaydetmiş: güncel kaydı HER SEFERİNDE al ve birleştir (sha tazelenir);
+           hemen en çok 3 kez dene, sonra 15 sn'lik yeniden deneme devralır */
+        return r.json().then(function(j){
+          isle(j);
+          if (O_DENEME < 3){ O_DENEME++; O_SURUYOR = null; return it(); }
+          O_HATA = 409;
+          return false;
+        });
       }
       O_HATA = r.status;
       return false;
@@ -990,7 +996,7 @@ function it(keepalive){
     .then(function(ok){
       O_SURUYOR = null;
       durumYaz();
-      if (!ok && O_HATA !== 401 && O_HATA !== 400) zamanla(15000);
+      if (!ok && O_HATA !== 401 && O_HATA !== 400){ O_DENEME = 0; zamanla(15000); }
       else if (ok && kirliO()) zamanla(1500);
       return ok;
     });
@@ -1037,6 +1043,7 @@ document.getElementById("bildirim-tamam").addEventListener("click", function(){
 function kaydet(){
   clearTimeout(yazZamanlayici);
   yerelYaz(D);
+  O_DENEME = 0;
   if (!FA){
     bildir("Bu cihazda saklandı.", "", "Yazdıklarınızın bize ulaşması için sayfayı size WhatsApp’tan gönderilen linkten açın.");
     return;
