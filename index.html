@@ -282,6 +282,13 @@ button,input,textarea{font:inherit;color:inherit}
 .ek-ac{display:none}
 
 .alt-not{margin:28px 0 0;max-width:72ch;font-size:13.5px;color:var(--murekkep-3)}
+.alt-not + .alt-not{margin-top:10px}
+.metin-dugme{
+  padding:0;border:0;background:none;
+  font:inherit;color:var(--altin-koyu);
+  text-decoration:underline;text-underline-offset:3px;cursor:pointer;
+}
+.metin-dugme:focus-visible{outline:2px solid var(--altin);outline-offset:2px;border-radius:3px}
 
 /* ---- dar ekran: satırlar alt alta ---- */
 @media (max-width:1020px){
@@ -520,14 +527,13 @@ button,input,textarea{font:inherit;color:inherit}
       <ol class="adimlar">
         <li><span><b>Fotoğrafa basın.</b> Açılan ekranda fotoğrafa tıklayarak, fare tekerleğiyle ya da telefonda iki parmakla iyice büyütüp taşları yakından görebilirsiniz.</span></li>
         <li><span><b>Taş ölçüsünü yazın.</b> Üründe birden fazla taş varsa hepsini yazın, örneğin “Damla 3×5 mm, 2 adet”. Ürün farklı ebatta taşla da yapılabiliyorsa o ölçüleri Alternatif ölçü kutularına yazın.</span></li>
-        <li><span><b>Ara verirken Kaydet’e basın.</b> Bu linki aynı telefonda ya da bilgisayarda tekrar açtığınızda kaldığınız yerden devam edersiniz.</span></li>
-        <li><span><b>Bitince Bize gönder’e basın.</b> Cevaplarınız küçük bir Excel dosyası olur; WhatsApp’tan bize gönderin.</span></li>
+        <li><span><b>Kaydet’e basın.</b> Yazdıklarınız doğrudan bize ulaşır, ayrıca dosya göndermenize gerek yok. Unutsanız da birkaç saniyede bir kendiliğinden kaydedilir. Bu linki başka bir telefonda ya da bilgisayarda açarsanız kaldığınız yerden devam edersiniz.</span></li>
       </ol>
     </div>
     <div class="firma">
       <label for="firma">Firma adı</label>
       <input id="firma" type="text" autocomplete="organization" placeholder="Firmanızın adı">
-      <p id="kayit-bilgi">Yazdıklarınız bu bilgisayarda kendiliğinden tutulur.</p>
+      <p id="kayit-bilgi">Kaydettiğiniz her şey bize ulaşır.</p>
     </div>
   </section>
 
@@ -539,13 +545,9 @@ button,input,textarea{font:inherit;color:inherit}
       <div class="sayac" id="sayac"><b>0</b> / 0 ürün yazıldı</div>
       <div class="durum" id="durum" role="status"><i></i><span>Henüz değişiklik yok</span></div>
       <div class="dugmeler">
-        <button class="dugme" id="kaydet" type="button" title="Yazdıklarınızı bu cihazda saklar; linki tekrar açınca devam edersiniz (Ctrl+S)">
+        <button class="dugme ana" id="kaydet" type="button" title="Yazdıklarınızı bize gönderir (Ctrl+S)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
           <span>Kaydet</span>
-        </button>
-        <button class="dugme ana" id="gonder" type="button" title="Cevapları Excel dosyası olarak hazırlar; WhatsApp’tan bize gönderin">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5L4 12zM11.5 13.5L20 4"/></svg>
-          <span>Bize gönder</span>
         </button>
       </div>
     </div>
@@ -561,7 +563,8 @@ button,input,textarea{font:inherit;color:inherit}
 
   <main id="liste"></main>
 
-  <p class="alt-not" id="alt-not">Yazdıklarınız bu cihazda, bu tarayıcıda saklanır; başka bir cihazdan açarsanız orada boş görünür. Bize ulaşması için Bize gönder’e basıp çıkan dosyayı göndermeniz gerekir. Fotoğraflar ürünün çevresinden kırpılmış telefon çekimleridir.</p>
+  <p class="alt-not" id="alt-not">Kaydet’e bastığınızda yazdıklarınız bize ulaşır ve bu linki açtığınız her cihazda görünür. Fotoğraflar ürünün çevresinden kırpılmış telefon çekimleridir.</p>
+  <p class="alt-not"><button type="button" class="metin-dugme" id="excel-indir">Cevapları Excel dosyası olarak indir</button></p>
 </div>
 
 <div class="bakici" id="bakici" role="dialog" aria-modal="true" aria-labelledby="yan-kod" hidden>
@@ -634,7 +637,6 @@ D.firma = D.firma || "";
 
 function deger(kod, alan){ return (D.veriler[kod] && D.veriler[kod][alan]) || ""; }
 function veriVar(){ return Object.keys(D.veriler).length > 0 || (D.firma || "").trim() !== ""; }
-function gonderilmediMi(){ return veriVar() && (D.guncellendi || "") > (D.sonGonder || ""); }
 
 var kutular = {};  /* "P500|olcu" -> [textarea, ...] */
 var yazZamanlayici = null;
@@ -655,7 +657,7 @@ function ayarla(kod, alan, v, kaynak){
   ilerleme();
   durumYaz();
   clearTimeout(yazZamanlayici);
-  yazZamanlayici = setTimeout(function(){ yerelYaz(D); }, 250);
+  yazZamanlayici = setTimeout(function(){ yerelYaz(D); zamanla(); }, 250);
 }
 
 /* ---- metin kutusu ---- */
@@ -796,10 +798,14 @@ function saat(iso){
 function saatDakika(iso){ return saat(iso).split(" ").pop(); }
 function durumYaz(){
   var yazi, sinif = "";
-  if (!veriVar()){ yazi = "Henüz bir şey yazılmadı"; }
-  else if (!yerelVar){ yazi = "Bu tarayıcı saklamıyor, gönderin"; sinif = "kirli"; }
-  else if (gonderilmediMi()){ yazi = "Kaydedildi (" + saatDakika(D.guncellendi) + "), henüz gönderilmedi"; sinif = "kirli"; }
-  else { yazi = "Gönderilecek dosya hazırlandı (" + saatDakika(D.sonGonder) + ")"; sinif = "tamam"; }
+  if (!FA){ yazi = veriVar() ? "Sadece bu cihazda: size gönderilen linki açın" : "Size gönderilen linki açın"; sinif = "kirli"; }
+  else if (O_SURUYOR){ yazi = "Kaydediliyor…"; }
+  else if (O_HATA === 401){ yazi = "Link geçersiz, bize haber verin"; sinif = "kirli"; }
+  else if (O_HATA === "ag"){ yazi = "İnternet yok, tekrar denenecek"; sinif = "kirli"; }
+  else if (O_HATA){ yazi = "Kaydedilemedi, tekrar denenecek"; sinif = "kirli"; }
+  else if (kirliO()){ yazi = "Kaydedilmemiş değişiklik var"; sinif = "kirli"; }
+  else if (S.zaman && veriVar()){ yazi = "Kaydedildi (" + saatDakika(S.zaman) + ")"; sinif = "tamam"; }
+  else { yazi = "Henüz bir şey yazılmadı"; }
   durumEl.className = "durum " + sinif;
   durumEl.querySelector("span").textContent = yazi;
 }
@@ -812,15 +818,167 @@ firmaEl.addEventListener("input", function(){
   D.guncellendi = new Date().toISOString();
   durumYaz();
   clearTimeout(yazZamanlayici);
-  yazZamanlayici = setTimeout(function(){ yerelYaz(D); }, 250);
+  yazZamanlayici = setTimeout(function(){ yerelYaz(D); zamanla(); }, 250);
 });
 if (!yerelVar){
-  document.getElementById("kayit-bilgi").textContent = "Bu tarayıcı yazdıklarınızı saklamıyor: sayfa kapanınca kaybolur. Bitirince sayfayı kapatmadan Bize gönder’e basın.";
+  document.getElementById("kayit-bilgi").textContent = "Bu tarayıcı bu cihazda saklamaya izin vermiyor (gizli sekme olabilir). Sayfayı kapatmadan önce Kaydet’e basın.";
   document.getElementById("kayit-bilgi").className = "vurgu";
-  document.getElementById("alt-not").textContent = "Bu tarayıcı saklamaya izin vermiyor (gizli sekme olabilir). Sayfayı kapatmadan Bize gönder’e basıp dosyayı gönderin.";
 }
 
-/* ---- Kaydet / Bize gönder ---- */
+/* ---- ortak kayıt: sayfa → Cloudflare aracısı → gizli GitHub reposu ----
+   Linkteki #f= form anahtarı (GitHub anahtarı DEĞİL) aracıya hangi formun yazılacağını söyler; ilk açılışta
+   bu cihaza alınır ve adres çubuğundan silinir. Her cihaz son eşitlenen hâli (S.taban) tutar; iki cihaz aynı
+   anda yazarsa alan alan birleştirilir: bu cihazda değişen alan kazanır, değişmeyen uzaktakini alır. */
+var ARACI = "https://p500-tas.p500-tas-araci.workers.dev";
+var FA_YERI = "p500-tas-olculeri:form-anahtari";
+var FA = "";
+(function(){
+  var m = location.hash.match(/(?:^#|&)f=([^&]+)/);
+  if (m){
+    FA = decodeURIComponent(m[1]);
+    try { window.localStorage.setItem(FA_YERI, FA); } catch (e) {}
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  } else {
+    try { FA = window.localStorage.getItem(FA_YERI) || ""; } catch (e) {}
+  }
+  if (ARACI.indexOf("http") !== 0) FA = "";
+})();
+var S_YERI = ANAHTAR + ":ortak";
+var S = (function(){ try { return JSON.parse(window.localStorage.getItem(S_YERI)) || {}; } catch (e) { return {}; } })();
+function sSakla(){ try { window.localStorage.setItem(S_YERI, JSON.stringify(S)); } catch (e) {} }
+var BOS = {firma: "", veriler: {}};
+var O_HATA = null, O_SURUYOR = null, O_CEKILIYOR = false, O_ZAMAN = null, O_DENEME = 0;
+
+function sirali(v){
+  var o = {};
+  Object.keys(v || {}).sort().forEach(function(k){
+    var a = {};
+    ALANLAR.forEach(function(al){ if (v[k] && v[k][al.id] && String(v[k][al.id]).trim()) a[al.id] = v[k][al.id]; });
+    if (Object.keys(a).length) o[k] = a;
+  });
+  return o;
+}
+function simdiki(){ return {firma: D.firma || "", veriler: sirali(D.veriler)}; }
+function imza(st){ return JSON.stringify({f: (st && st.firma) || "", v: sirali(st && st.veriler)}); }
+function kirliO(){ return !!FA && imza(simdiki()) !== imza(S.taban || BOS); }
+
+function birlestir(taban, benim, onlarin){
+  function al(st, k, a){ return (st.veriler[k] && st.veriler[k][a]) || ""; }
+  var kodlar = {};
+  [taban, benim, onlarin].forEach(function(st){ Object.keys(st.veriler).forEach(function(k){ kodlar[k] = 1; }); });
+  var s = {firma: (benim.firma !== taban.firma) ? benim.firma : onlarin.firma, veriler: {}};
+  Object.keys(kodlar).forEach(function(k){
+    ALANLAR.forEach(function(a){
+      var t = al(taban, k, a.id), b = al(benim, k, a.id), o = al(onlarin, k, a.id);
+      var v = (b !== t) ? b : o;
+      if (v) (s.veriler[k] = s.veriler[k] || {})[a.id] = v;
+    });
+  });
+  return s;
+}
+
+/* uzaktan gelen hâli ekrana ve bu cihazın kaydına işler (yazılmakta olan kutuya dokunmaz) */
+function ekranaIsle(st){
+  D.firma = st.firma || "";
+  D.veriler = JSON.parse(JSON.stringify(st.veriler || {}));
+  yerelYaz(D);
+  if (document.activeElement !== firmaEl) firmaEl.value = D.firma;
+  Object.keys(kutular).forEach(function(k){
+    var p = k.split("|"), v = deger(p[0], p[1]);
+    kutular[k].forEach(function(t){
+      if (!t.isConnected || t.value === v || document.activeElement === t) return;
+      t.value = v;
+      boyutla(t);
+      var gizli = v && t.closest(".alan.kapali");
+      if (gizli) gizli.classList.remove("kapali");
+    });
+  });
+  ilerleme();
+}
+
+function araciIstek(yontem, govde, keepalive){
+  var h = {"X-Form-Anahtari": FA};
+  if (govde) h["Content-Type"] = "application/json";
+  return fetch(ARACI + "/veri", {method: yontem, cache: "no-store", keepalive: !!keepalive, headers: h,
+                                 body: govde ? JSON.stringify(govde) : undefined});
+}
+
+/* aracıdan gelen kaydı bu cihazdakiyle birleştirir */
+function isle(j){
+  var u = {firma: j.firma || "", veriler: sirali(j.veriler)};
+  if (S.taban && (j.sha || null) === (S.sha || null)) return;
+  var benim = simdiki(), yeni;
+  if (!S.taban){
+    if (imza(benim) !== imza(BOS) && imza(benim) !== imza(u)){
+      yeni = window.confirm("Bu cihazda daha önce yazılmış, bize henüz ulaşmamış ölçüler var.\n\nTamam: bunlar da kaydedilsin.\nİptal: silinsin, kayıtlı olanlar gösterilsin.")
+        ? birlestir(BOS, benim, u) : u;
+    } else {
+      yeni = u;
+    }
+  } else {
+    yeni = kirliO() ? birlestir(S.taban, benim, u) : u;
+  }
+  S.sha = j.sha || null;
+  S.taban = u;
+  S.zaman = new Date().toISOString();
+  sSakla();
+  if (imza(yeni) !== imza(benim)) ekranaIsle(yeni);
+  if (kirliO()) zamanla(1500);
+}
+
+function cek(){
+  if (!FA || O_CEKILIYOR || O_SURUYOR) return Promise.resolve(false);
+  O_CEKILIYOR = true;
+  return araciIstek("GET").then(function(r){
+    if (!r.ok){ O_HATA = r.status; return false; }
+    return r.json().then(function(j){ O_HATA = null; isle(j); return true; });
+  }).catch(function(){ O_HATA = "ag"; return false; })
+    .then(function(x){ O_CEKILIYOR = false; durumYaz(); return x; });
+}
+
+function zamanla(ms){
+  if (!FA) return;
+  clearTimeout(O_ZAMAN);
+  O_ZAMAN = setTimeout(function(){ it(); }, ms == null ? 4000 : ms);
+}
+
+function it(keepalive){
+  if (!FA) return Promise.resolve(false);
+  clearTimeout(O_ZAMAN);
+  if (O_SURUYOR) return O_SURUYOR.then(function(){ return it(keepalive); });
+  if (!kirliO()){
+    if (O_HATA !== 401) O_HATA = null;
+    durumYaz();
+    return Promise.resolve(O_HATA == null);
+  }
+  var gonderilen = simdiki();
+  O_SURUYOR = araciIstek("PUT", {sha: S.sha || null, firma: gonderilen.firma, veriler: gonderilen.veriler}, keepalive)
+    .then(function(r){
+      if (r.ok) return r.json().then(function(j){
+        S.sha = j.sha; S.taban = gonderilen; S.zaman = new Date().toISOString(); sSakla();
+        O_HATA = null; O_DENEME = 0;
+        return true;
+      });
+      if (r.status === 409 && O_DENEME < 3){
+        O_DENEME++;
+        return r.json().then(function(j){ isle(j); O_SURUYOR = null; return it(); });
+      }
+      O_HATA = r.status;
+      return false;
+    })
+    .catch(function(){ O_HATA = "ag"; return false; })
+    .then(function(ok){
+      O_SURUYOR = null;
+      durumYaz();
+      if (!ok && O_HATA !== 401 && O_HATA !== 400) zamanla(15000);
+      else if (ok && kirliO()) zamanla(1500);
+      return ok;
+    });
+  durumYaz();
+  return O_SURUYOR;
+}
+
+/* ---- Kaydet / Excel ---- */
 function ascii(s){
   var tr = {"ç":"c","Ç":"C","ğ":"g","Ğ":"G","ı":"i","İ":"I","ö":"o","Ö":"O","ş":"s","Ş":"S","ü":"u","Ü":"U"};
   return s.replace(/[çÇğĞıİöÖşŞüÜ]/g, function(c){ return tr[c]; })
@@ -855,50 +1013,41 @@ document.getElementById("bildirim-tamam").addEventListener("click", function(){
   document.getElementById("bildirim").hidden = true;
 });
 
-/* Kaydet: bu cihazda saklar (yazarken de kendiliğinden saklanır; düğme ara verirken içini rahatlatır) */
+/* Kaydet: hemen gönderir (yazarken de birkaç saniyede bir kendiliğinden gönderilir) */
 function kaydet(){
   clearTimeout(yazZamanlayici);
-  if (yerelYaz(D)){
-    durumYaz();
-    bildir("Kaydedildi.", "", "Bu linki aynı telefonda ya da bilgisayarda tekrar açtığınızda kaldığınız yerden devam edersiniz. Bitirince Bize gönder’e basmayı unutmayın.");
-  } else {
-    bildir("Bu tarayıcı kaydetmeye izin vermiyor.", "", "Sayfayı kapatmadan Bize gönder’e basın ve çıkan dosyayı WhatsApp’tan bize gönderin.");
-  }
-}
-
-/* Bize gönder: cevapları küçük bir Excel dosyası yapar; telefonda paylaşım ekranını açar, bilgisayarda indirir */
-var DOKUNMATIK = window.matchMedia && matchMedia("(pointer: coarse)").matches;
-function gonder(){
-  var ad = dosyaAdi("csv");
-  var icerik = csvMetni();
-  var dosya = null;
-  try { dosya = new File([icerik], ad, {type: "text/csv"}); } catch (e) {}
-  function tamam(paylasildi){
-    D.sonGonder = D.guncellendi || new Date().toISOString();
-    yerelYaz(D);
-    durumYaz();
-    if (paylasildi) bildir("Dosya hazır:", ad, "Paylaşım ekranından WhatsApp’ı seçip bize gönderin.");
-    else bildir("Dosya indirildi:", ad, "Bu dosyayı WhatsApp’tan bize gönderin. İndirilenler klasöründe bulabilirsiniz.");
-  }
-  if (DOKUNMATIK && dosya && navigator.canShare && navigator.canShare({files: [dosya]})){
-    navigator.share({files: [dosya], title: "P500 taş ölçüleri", text: "P500 taş ölçüleri" + (D.firma ? " (" + D.firma + ")" : "")})
-      .then(function(){ tamam(true); })
-      .catch(function(e){ if (!e || e.name !== "AbortError"){ indir(icerik, ad, "text/csv;charset=utf-8"); tamam(false); } });
+  yerelYaz(D);
+  if (!FA){
+    bildir("Bu cihazda saklandı.", "", "Yazdıklarınızın bize ulaşması için sayfayı size WhatsApp’tan gönderilen linkten açın.");
     return;
   }
-  indir(icerik, ad, "text/csv;charset=utf-8");
-  tamam(false);
+  it().then(function(ok){
+    if (ok) bildir("Kaydedildi.", "", "Yazdıklarınız bize ulaştı. Bu linki başka bir telefonda ya da bilgisayarda açarsanız kaldığınız yerden devam edersiniz.");
+    else if (O_HATA === 401) bildir("Kaydedilemedi.", "", "Bu link geçersiz. Yazdıklarınız bu cihazda duruyor; bize haber verin.");
+    else if (O_HATA === "ag") bildir("Kaydedilemedi.", "", "İnternet bağlantısı yok gibi görünüyor. Yazdıklarınız bu cihazda duruyor; bağlantı gelince kendiliğinden kaydedilecek.");
+    else bildir("Kaydedilemedi.", "", "Şu an kaydedilemiyor. Yazdıklarınız bu cihazda duruyor ve birazdan kendiliğinden yeniden denenecek. Sorun sürerse bize haber verin.");
+  });
 }
 document.getElementById("kaydet").addEventListener("click", kaydet);
-document.getElementById("gonder").addEventListener("click", gonder);
+document.getElementById("excel-indir").addEventListener("click", function(){
+  indir(csvMetni(), dosyaAdi("csv"), "text/csv;charset=utf-8");
+});
 document.addEventListener("keydown", function(e){
   if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")){ e.preventDefault(); kaydet(); }
+});
+document.addEventListener("visibilitychange", function(){
+  if (document.visibilityState === "hidden"){ yerelYaz(D); if (kirliO()) it(); }
+  else cek();
 });
 window.addEventListener("pagehide", function(){ yerelYaz(D); });
 window.addEventListener("beforeunload", function(e){
   yerelYaz(D);
-  if (!yerelVar && veriVar()){ e.preventDefault(); e.returnValue = ""; }
+  if (kirliO() || (!yerelVar && veriVar())){ e.preventDefault(); e.returnValue = ""; }
 });
+/* açık sayfa kırk beş saniyede bir son kaydı çeker: başka cihazda yazılanlar burada da görünür */
+setInterval(function(){
+  if (document.visibilityState === "visible" && !kirliO()) cek();
+}, 45000);
 
 /* ---- Excel dosyası: ; ile ayrılmış, Türkçe Excel'in doğrudan açtığı CSV (UTF-8 BOM) ---- */
 function csvMetni(){
@@ -1133,6 +1282,7 @@ ustYuk();
 window.addEventListener("resize", ustYuk);
 ilerleme();
 durumYaz();
+cek();
 requestAnimationFrame(function(){
   Array.prototype.forEach.call(document.querySelectorAll("#liste textarea"), function(t){ if (t.value) boyutla(t); });
 });
