@@ -811,9 +811,9 @@ function saat(iso){
 function saatDakika(iso){ return saat(iso).split(" ").pop(); }
 function durumYaz(){
   var yazi, sinif = "";
-  if (!FA){ yazi = veriVar() ? "Sadece bu cihazda: size gönderilen linki açın" : "Size gönderilen linki açın"; sinif = "kirli"; }
+  if (!AKTIF){ yazi = "Sadece bu cihazda saklanıyor"; sinif = "kirli"; }
   else if (O_SURUYOR){ yazi = "Kaydediliyor…"; }
-  else if (O_HATA === 401){ yazi = "Link geçersiz, bize haber verin"; sinif = "kirli"; }
+  else if (O_HATA === 401 || O_HATA === 403){ yazi = "Kayıt yerine ulaşılamıyor, bize haber verin"; sinif = "kirli"; }
   else if (O_HATA === "ag"){ yazi = "İnternet yok, tekrar denenecek"; sinif = "kirli"; }
   else if (O_HATA){ yazi = "Kaydedilemedi, tekrar denenecek"; sinif = "kirli"; }
   else if (kirliO()){ yazi = "Kaydedilmemiş değişiklik var"; sinif = "kirli"; }
@@ -821,12 +821,12 @@ function durumYaz(){
   else { yazi = "Henüz bir şey yazılmadı"; }
   durumEl.className = "durum " + sinif;
   durumEl.querySelector("span").textContent = yazi;
-  /* eksik ya da bozuk link: en üstte göze batan uyarı */
+  /* kayıt yerine hiç ulaşılamıyorsa: en üstte göze batan uyarı */
   var uyari = document.getElementById("link-uyari");
-  uyari.hidden = !(!FA || O_HATA === 401);
-  if (O_HATA === 401){
-    document.getElementById("link-uyari-baslik").textContent = "Bu link geçersiz.";
-    document.getElementById("link-uyari-metin").textContent = "Yazdıklarınız bize ulaşmıyor, bu cihazda bekliyor. Link eksik kopyalanmış olabilir; size WhatsApp’tan gönderilen mesajdaki linke dokunarak yeniden açın. Düzelmezse bize haber verin.";
+  uyari.hidden = !(O_HATA === 401 || O_HATA === 403);
+  if (!uyari.hidden){
+    document.getElementById("link-uyari-baslik").textContent = "Kayıt yerine ulaşılamıyor.";
+    document.getElementById("link-uyari-metin").textContent = "Yazdıklarınız bize ulaşmıyor, bu cihazda bekliyor. Lütfen bize haber verin.";
   }
 }
 
@@ -846,10 +846,12 @@ if (!yerelVar){
 }
 
 /* ---- ortak kayıt: sayfa → Cloudflare aracısı → gizli GitHub reposu ----
-   Linkteki #f= form anahtarı (GitHub anahtarı DEĞİL) aracıya hangi formun yazılacağını söyler; ilk açılışta
-   bu cihaza alınır ve adres çubuğundan silinir. Her cihaz son eşitlenen hâli (S.taban) tutar; iki cihaz aynı
+   14.10.2026'dan beri anahtarsız: normal linkle açılan her cihaz kaydeder ve son hâli görür.
+   Linkte #f= varsa (eski linkler, deneme anahtarı) aracıya başlıkla gider; aracı deneme anahtarını test.json'a,
+   diğer her şeyi gerçek dosyaya yönlendirir. Her cihaz son eşitlenen hâli (S.taban) tutar; iki cihaz aynı
    anda yazarsa alan alan birleştirilir: bu cihazda değişen alan kazanır, değişmeyen uzaktakini alır. */
 var ARACI = "https://p500-tas.p500-tas-araci.workers.dev";
+var AKTIF = ARACI.indexOf("http") === 0;
 var FA_YERI = "p500-tas-olculeri:form-anahtari";
 var FA = "";
 (function(){
@@ -861,7 +863,6 @@ var FA = "";
   } else {
     try { FA = window.localStorage.getItem(FA_YERI) || ""; } catch (e) {}
   }
-  if (ARACI.indexOf("http") !== 0) FA = "";
 })();
 var S_YERI = ANAHTAR + ":ortak";
 var S = (function(){ try { return JSON.parse(window.localStorage.getItem(S_YERI)) || {}; } catch (e) { return {}; } })();
@@ -880,7 +881,7 @@ function sirali(v){
 }
 function simdiki(){ return {firma: D.firma || "", veriler: sirali(D.veriler)}; }
 function imza(st){ return JSON.stringify({f: (st && st.firma) || "", v: sirali(st && st.veriler)}); }
-function kirliO(){ return !!FA && imza(simdiki()) !== imza(S.taban || BOS); }
+function kirliO(){ return AKTIF && imza(simdiki()) !== imza(S.taban || BOS); }
 
 function birlestir(taban, benim, onlarin){
   function al(st, k, a){ return (st.veriler[k] && st.veriler[k][a]) || ""; }
@@ -917,7 +918,8 @@ function ekranaIsle(st){
 }
 
 function araciIstek(yontem, govde, keepalive){
-  var h = {"X-Form-Anahtari": FA};
+  var h = {};
+  if (FA) h["X-Form-Anahtari"] = FA;
   if (govde) h["Content-Type"] = "application/json";
   return fetch(ARACI + "/veri", {method: yontem, cache: "no-store", keepalive: !!keepalive, headers: h,
                                  body: govde ? JSON.stringify(govde) : undefined});
@@ -930,7 +932,8 @@ function isle(j){
   var benim = simdiki(), yeni;
   if (!S.taban){
     if (imza(benim) !== imza(BOS) && imza(benim) !== imza(u)){
-      yeni = window.confirm("Bu cihazda daha önce yazılmış, bize henüz ulaşmamış ölçüler var.\n\nTamam: bunlar da kaydedilsin.\nİptal: silinsin, kayıtlı olanlar gösterilsin.")
+      yeni = window.confirm("Bu cihazda bize henüz ulaşmamış ölçüler var: " + Object.keys(benim.veriler).join(", ") +
+                            ".\n\nTamam: bunlar da kaydedilsin.\nİptal: bu cihazdakiler silinsin, kayıtlı olanlar gösterilsin.")
         ? birlestir(BOS, benim, u) : u;
     } else {
       yeni = u;
@@ -947,7 +950,7 @@ function isle(j){
 }
 
 function cek(){
-  if (!FA || O_CEKILIYOR || O_SURUYOR) return Promise.resolve(false);
+  if (!AKTIF || O_CEKILIYOR || O_SURUYOR) return Promise.resolve(false);
   O_CEKILIYOR = true;
   return araciIstek("GET").then(function(r){
     if (!r.ok){ O_HATA = r.status; return false; }
@@ -957,13 +960,13 @@ function cek(){
 }
 
 function zamanla(ms){
-  if (!FA) return;
+  if (!AKTIF) return;
   clearTimeout(O_ZAMAN);
   O_ZAMAN = setTimeout(function(){ it(); }, ms == null ? 4000 : ms);
 }
 
 function it(keepalive){
-  if (!FA) return Promise.resolve(false);
+  if (!AKTIF) return Promise.resolve(false);
   clearTimeout(O_ZAMAN);
   if (O_SURUYOR) return O_SURUYOR.then(function(){ return it(keepalive); });
   if (!kirliO()){
@@ -1044,13 +1047,13 @@ function kaydet(){
   clearTimeout(yazZamanlayici);
   yerelYaz(D);
   O_DENEME = 0;
-  if (!FA){
-    bildir("Bu cihazda saklandı.", "", "Yazdıklarınızın bize ulaşması için sayfayı size WhatsApp’tan gönderilen linkten açın.");
+  if (!AKTIF){
+    bildir("Bu cihazda saklandı.", "", "Bu sayfa kayıt sunucusuna bağlı değil; bize haber verin.");
     return;
   }
   it().then(function(ok){
     if (ok) bildir("Kaydedildi.", "", "Yazdıklarınız bize ulaştı. Bu linki başka bir telefonda ya da bilgisayarda açarsanız kaldığınız yerden devam edersiniz.");
-    else if (O_HATA === 401) bildir("Kaydedilemedi.", "", "Bu link geçersiz. Yazdıklarınız bu cihazda duruyor; bize haber verin.");
+    else if (O_HATA === 401 || O_HATA === 403) bildir("Kaydedilemedi.", "", "Kayıt yerine ulaşılamıyor. Yazdıklarınız bu cihazda duruyor; bize haber verin.");
     else if (O_HATA === "ag") bildir("Kaydedilemedi.", "", "İnternet bağlantısı yok gibi görünüyor. Yazdıklarınız bu cihazda duruyor; bağlantı gelince kendiliğinden kaydedilecek.");
     else bildir("Kaydedilemedi.", "", "Şu an kaydedilemiyor. Yazdıklarınız bu cihazda duruyor ve birazdan kendiliğinden yeniden denenecek. Sorun sürerse bize haber verin.");
   });
